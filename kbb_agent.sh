@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# =============================================================================
+# kbb_agent.sh — KIST-Bob-Bot scheduler daemon (systemd user service).
+#
+#   * on start:       posts "🟢 KIST-Bob-Bot online"
+#   * Mon–Fri:        lunch menu post 11:00–11:59 (retries while the
+#                     cafeteria hasn't registered it; gives up at 11:55),
+#                     dinner menu post 17:00–17:59 (gives up at 17:55)
+#                     photo watcher every 5 min: 11:05–11:55 / 17:05–18:25
+#   * on SIGTERM/SIGINT: posts "🔴 KIST-Bob-Bot offline" FIRST, then exits
+#
+# A meal whose whole window was missed (machine was off) is not posted late.
+# =============================================================================
+set -uo pipefail
+
+# Schedule windows and date keys follow KIST's local time, regardless of
+# the host's timezone.
+export TZ=Asia/Seoul
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+# KBB_STATE_DIR isolates test runs from the production once-per-day state.
+STATE_DIR="${KBB_STATE_DIR:-$SCRIPT_DIR/.state}"
+mkdir -p "$STATE_DIR"
+
+BOT="$SCRIPT_DIR/kist_bob_bot.sh"
+NOTIFY="$SCRIPT_DIR/notify_dooray.sh"
+PHOTOS="$SCRIPT_DIR/post_slot_images.sh"
+
+log() { printf 'kbb_agent: %s\n' "$*"; }
+
+post_online() {
+  if "$NOTIFY" "🟢 KIST-Bob-Bot online" \
+       "Mon–Fri: lunch 11:00 · dinner 17:00 + photo follow-ups." "green"; then
+    log "posted online"
+  else
+    log "ERROR: online notice failed"
+  fi
+}
+
+SHUTTING_DOWN=0
+post_offline_and_exit() {
+  [ "$SHUTTING_DOWN" = 1 ] && exit 0
+  SHUTTING_DOWN=1
+  trap - TERM INT
+  log "stopping — posting offline notice"
+  if "$NOTIFY" "🔴 KIST-Bob-Bot offline" \
+       "Bot is now offline, no posts until it is back online." "red"; then
+    log "posted offline"
+  else
+    log "ERROR: offline notice failed"
+  fi
+  exit 0
+}
+trap post_offline_and_exit TERM INT
+
+# prune state older than 7 days (same policy as post_slot_images.sh)
+find "$STATE_DIR" -name '????????-*' -mtime +7 -delete 2>/dev/null
+
+log "starting (pid $$)"
+post_online
+
+# try_menu <slot> <window_start_min> <giveup_min> <now_min>
+# Posts the slot's menu once per day. While the cafeteria hasn't registered
+# it (orchestrator exit 3), retries every tick; at giveup, posts a yellow
+# warning once instead of a menu.
+try_menu() {
+  local slot=$1 wstart=$2 giveup=$3 now=$4 rc
+  local day state missed
+  day=$(date +%Y%m%d)
+  state="$STATE_DIR/${day}-${slot}-menu"
+  missed="$STATE_DIR/${day}-${slot}-menu-missed"
+  if [ -f "$state" ] || [ -f "$missed" ]; then return 0; fi
+  if [ "$now" -lt "$wstart" ]; then return 0; fi
+  if [ "$now" -ge "$giveup" ]; then
+    if "$NOTIFY" "⚠️ ${slot} menu not registered" \
+      "as of $(date +%H:%M) the cafeteria had not registered today's ${slot} menu — nothing posted for this meal" \
+      "yellow"; then
+      [ "${KBB_DRY_RUN:-0}" = 1 ] || echo "$(date '+%F %T')" > "$missed"
+    fi
+    return 0
+  fi
+  rc=0
+  "$BOT" "$slot" || rc=$?
+  case "$rc" in
+    0)
+      if [ "${KBB_DRY_RUN:-0}" = 1 ]; then
+        log "$slot menu DRY-RUN ok (state not written)"
+      else
+        echo "$(date '+%F %T')" > "$state"; log "$slot menu posted"
+      fi ;;
+    3) log "$slot menu not registered yet — retrying" ;;
+    *) log "$slot menu post failed (rc=$rc) — retrying" ;;
+  esac
+}
+
+while :; do
+  dow=$(date +%u)
+  if [ "$dow" -le 5 ]; then
+    h=$(date +%H); m=$(date +%M)
+    min=$((10#$h * 60 + 10#$m))
+    try_menu lunch  660  715  "$min"   # 11:00–11:55
+    try_menu dinner 1020 1075 "$min"   # 17:00–17:55
+    if [ $((min % 5)) -eq 0 ]; then
+      [ "$min" -ge 665 ]  && [ "$min" -lt 720 ]  && "$PHOTOS" lunch   # 11:05–11:55
+      [ "$min" -ge 1025 ] && [ "$min" -le 1109 ] && "$PHOTOS" dinner  # 17:05–18:25
+    fi
+  fi
+  sleep 30
+done

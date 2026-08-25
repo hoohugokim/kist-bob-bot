@@ -1,0 +1,21 @@
+# KIST-Bob-Bot scheduler — systemd user service.
+# Install (adjust ExecStart to your clone path):
+#   cp kist-bob-bot.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now kist-bob-bot
+#   loginctl enable-linger $USER
+[Unit]
+Description=KIST Bob Bot — cafeteria menu + photos → Dooray channel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=TZ=Asia/Seoul
+ExecStart=%h/workbench/KIST-Bob-Bot/kbb_agent.sh
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

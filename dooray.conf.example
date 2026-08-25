@@ -1,0 +1,18 @@
+# KIST-Bob-Bot — Dooray target config.
+#   cp dooray.conf.example dooray.conf && chmod 600 dooray.conf
+#
+# Sourced by notify_dooray.sh. Never commit the real dooray.conf.
+
+# Required. Channel → Settings → Incoming Hook → Copy URL.
+# SECURITY: the hook URL is a credential — anyone holding it can post to the
+# channel. It must stay in dooray.conf (gitignored), never in the repo.
+DOORAY_HOOK_URL=""
+
+# Bot name shown on every post.
+DOORAY_BOT_NAME="KIST-Bob-Bot"
+
+# Optional: public image URL used as the bot avatar on every post
+# (hook field botIconImage; no restart needed to change).
+# Self-hosted from this repo:
+# DOORAY_BOT_ICON_URL="https://raw.githubusercontent.com/<you>/kist-bob-bot/main/assets/KBB-avatar.png"
+DOORAY_BOT_ICON_URL=""

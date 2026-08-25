@@ -1,0 +1,21 @@
+# secrets — the real config (holds the hook URL)
+dooray.conf
+dooray.sandbox.conf
+
+# runtime state (once-per-day dedupe) and dry-run payloads
+.state/
+.state-test/
+.dryrun/
+
+# python
+__pycache__/
+*.pyc
+
+# internal (private) project docs & assets — kept local, not shipped
+DOCUMENTATION.md
+REPORT.md
+HANDOFF.md
+KBB-Icon.png
+_local/
+
+.DS_Store

@@ -1,3 +1,5 @@
+![KIST-Bob-Bot avatar](https://raw.githubusercontent.com/hoohugokim/kist-bob-bot/refs/heads/main/assets/KBB-avatar.png)
+
 # KIST-Bob-Bot (키밥봇)
 
 KIST(한국과학기술연구원) 식당 메뉴를 Dooray 채널에 자동으로 알려주는 봇입니다.

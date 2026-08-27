@@ -10,7 +10,7 @@ KIST(한국과학기술연구원) 식당 메뉴를 Dooray 채널에 자동으로
 
 비공식 · 단일 머신 (Linux systemd) · Python 표준 라이브러리만 사용.
 
-클라우드 모델 없이 로컬 Qwen3.8-27B FP8 W8A16 (vLLM) 모델을 OpenCode 하네스로 구동하여 제작되었습니다.
+클라우드 모델 없이 로컬 Qwen3.8-27B (FP8 W8A16, vLLM) 모델을 추론 강도 xhigh로 OpenCode 하네스에 구동하여 제작되었습니다.
 
 ## 게시 예시
 

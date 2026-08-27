@@ -400,9 +400,10 @@ def format_nutrient_detail_text(menu_result: dict) -> str:
     every platform; single spaces only (markdown collapses repeats).
     The %→grams gap is an en space (U+2002), which markdown does not
     collapse — plain repeated spaces would render as one. The dish line
-    (corner + name) is bold; the kcal/sodium part sits on its own line
-    under it (no em dash); macro gram weights are whole grams — so lines
-    stay short on narrow mobile screens.
+    (corner + name) is plain — hook text renders ** markers literally
+    (no markdown emphasis); the kcal/sodium part sits on its own line
+    under it (no em dash); macro gram weights are whole grams — so
+    lines stay short on narrow mobile screens.
     Returns '' if no nutrient detail is registered for any item.
     """
     slots = menu_result.get("slots", [])
@@ -411,10 +412,7 @@ def format_nutrient_detail_text(menu_result: dict) -> str:
     blocks = []  # (header, [row, ...], parts_line or None)
     for slot in slots:
         for m in slot["items"]:
-            nm = m['menuNm']
-            if m.get("corner"):
-                nm = f"{m['corner']} {nm}"
-            head = f"**{nm}**"
+            head = f"{m['corner']} {m['menuNm']}" if m.get("corner") else m['menuNm']
             bits = [_fmt_n(m.get("kcal"), "kcal")]
             if m.get("sodium") is not None:
                 bits.append(f"sodium {_fmt_n(m['sodium'], 'mg')}")

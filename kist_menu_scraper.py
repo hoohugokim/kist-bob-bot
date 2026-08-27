@@ -392,7 +392,7 @@ def _bar(pct: int, width: int = 10) -> str:
 
 
 def format_nutrient_detail_text(menu_result: dict) -> str:
-    """ASCII 'detail page' card: macro bars + sodium + component Kcal.
+    """ASCII 'detail page' card: macro bars + sodium + component kcal.
 
     Plain text (no code fence): Dooray clients render fences inconsistently
     (stray backticks / red text). Macro rows use single CJK labels

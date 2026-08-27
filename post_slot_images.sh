@@ -71,7 +71,7 @@ for m in with_imgs:
     cap = m["menuNm"]
     kcal, prot = m.get("kcal"), m.get("protein")
     bits = []
-    if kcal is not None: bits.append(_fmt_n(kcal, "Kcal"))
+    if kcal is not None: bits.append(_fmt_n(kcal, "kcal"))
     if prot is not None: bits.append("Protein " + _fmt_n(prot, "g"))
     if bits:
         cap += f" — {' · '.join(bits)}"

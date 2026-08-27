@@ -370,7 +370,7 @@ def format_dooray_text(menu_result: dict, slot_word: str = "") -> tuple:
         lines.append(f"▸ {slot['timeNm']}")
         for m in slot["items"]:
             corner = f" [{m['corner']}]" if m.get("corner") else ""
-            kcal = _fmt_n(m.get("kcal"), "Kcal")
+            kcal = _fmt_n(m.get("kcal"), "kcal")
             protein = _fmt_n(m.get("protein"), "g")
             tail_parts = []
             if kcal:
@@ -399,8 +399,9 @@ def format_nutrient_detail_text(menu_result: dict) -> str:
     (탄/단/지 = carbs/protein/fat) so the label column is uniform-width on
     every platform; single spaces only (markdown collapses repeats).
     The %→grams gap is an en space (U+2002), which markdown does not
-    collapse — plain repeated spaces would render as one. The Kcal/sodium
-    part sits on its own line under the dish name (no em dash), so lines
+    collapse — plain repeated spaces would render as one. The dish line
+    (corner + name) is bold; the kcal/sodium part sits on its own line
+    under it (no em dash); macro gram weights are whole grams — so lines
     stay short on narrow mobile screens.
     Returns '' if no nutrient detail is registered for any item.
     """
@@ -410,8 +411,11 @@ def format_nutrient_detail_text(menu_result: dict) -> str:
     blocks = []  # (header, [row, ...], parts_line or None)
     for slot in slots:
         for m in slot["items"]:
-            head = f"{m['corner']} {m['menuNm']}"
-            bits = [_fmt_n(m.get("kcal"), "Kcal")]
+            nm = m['menuNm']
+            if m.get("corner"):
+                nm = f"{m['corner']} {nm}"
+            head = f"**{nm}**"
+            bits = [_fmt_n(m.get("kcal"), "kcal")]
             if m.get("sodium") is not None:
                 bits.append(f"sodium {_fmt_n(m['sodium'], 'mg')}")
             if bits:
@@ -436,7 +440,9 @@ def format_nutrient_detail_text(menu_result: dict) -> str:
                     p = 0
                 # "\u2002": en space — a real visual gap that survives markdown's
                 # repeated-space collapsing (plain spaces render as one)
-                rows.append(f"{kor} {_bar(p)} {p} % \u2002{_fmt_n(val, 'g')}")
+                # whole grams: decimal weights pushed the 탄 line past the
+                # width on Android
+                rows.append(f"{kor} {_bar(p)} {p} % \u2002{_fmt_n(int(round(float(val))), 'g')}")
             parts = None
             comps = [c for c in (m.get("components") or []) if c[1] is not None]
             if comps:

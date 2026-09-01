@@ -12,6 +12,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment=TZ=Asia/Seoul
+# Set to 0 to suppress 🟢/🔴 lifecycle notices (frequent work-day reboots):
+# Environment=KBB_LIFECYCLE_NOTICE=0
 ExecStart=%h/workbench/KIST-Bob-Bot/kbb_agent.sh
 Restart=on-failure
 RestartSec=30

@@ -10,6 +10,9 @@
 #   * on SIGTERM/SIGINT: posts "🔴 KIST-Bob-Bot offline" FIRST, then exits
 #
 # A meal whose whole window was missed (machine was off) is not posted late.
+#
+# KBB_LIFECYCLE_NOTICE=0 suppresses the 🟢/🔴 notices — set it in the systemd
+# unit (Environment=...) on machines that reboot often during the work day.
 # =============================================================================
 set -uo pipefail
 
@@ -30,6 +33,10 @@ PHOTOS="$SCRIPT_DIR/post_slot_images.sh"
 log() { printf 'kbb_agent: %s\n' "$*"; }
 
 post_online() {
+  if [ "${KBB_LIFECYCLE_NOTICE:-1}" = "0" ]; then
+    log "online notice suppressed (KBB_LIFECYCLE_NOTICE=0)"
+    return 0
+  fi
   if "$NOTIFY" "🟢 KIST-Bob-Bot online" \
        "Mon–Fri: lunch 11:00 · dinner 17:00 + photo follow-ups." "green"; then
     log "posted online"
@@ -43,6 +50,10 @@ post_offline_and_exit() {
   [ "$SHUTTING_DOWN" = 1 ] && exit 0
   SHUTTING_DOWN=1
   trap - TERM INT
+  if [ "${KBB_LIFECYCLE_NOTICE:-1}" = "0" ]; then
+    log "stopping — offline notice suppressed (KBB_LIFECYCLE_NOTICE=0)"
+    exit 0
+  fi
   log "stopping — posting offline notice"
   if "$NOTIFY" "🔴 KIST-Bob-Bot offline" \
        "Bot is now offline, no posts until it is back online." "red"; then

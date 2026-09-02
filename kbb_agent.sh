@@ -29,6 +29,7 @@ mkdir -p "$STATE_DIR"
 BOT="$SCRIPT_DIR/kist_bob_bot.sh"
 NOTIFY="$SCRIPT_DIR/notify_dooray.sh"
 PHOTOS="$SCRIPT_DIR/post_slot_images.sh"
+SCRAPER="$SCRIPT_DIR/kist_menu_scraper.py"
 
 log() { printf 'kbb_agent: %s\n' "$*"; }
 
@@ -74,19 +75,49 @@ post_online
 # try_menu <slot> <window_start_min> <giveup_min> <now_min>
 # Posts the slot's menu once per day. While the cafeteria hasn't registered
 # it (orchestrator exit 3), retries every tick; at giveup, posts a yellow
-# warning once instead of a menu.
+# warning once instead of a menu. The warning is based on a final read-only
+# probe, so it tells the truth: menu unregistered / bot missed the window
+# (menu exists) / cafeteria closed / menu service unreachable.
 try_menu() {
   local slot=$1 wstart=$2 giveup=$3 now=$4 rc
-  local day state missed
+  local day state missed probe probe_rc verdict detail
   day=$(date +%Y%m%d)
   state="$STATE_DIR/${day}-${slot}-menu"
   missed="$STATE_DIR/${day}-${slot}-menu-missed"
   if [ -f "$state" ] || [ -f "$missed" ]; then return 0; fi
   if [ "$now" -lt "$wstart" ]; then return 0; fi
   if [ "$now" -ge "$giveup" ]; then
-    if "$NOTIFY" "⚠️ ${slot} menu not registered" \
-      "as of $(date +%H:%M) the cafeteria had not registered today's ${slot} menu — nothing posted for this meal" \
-      "yellow"; then
+    # Final read-only probe so the warning reports the real cause instead
+    # of always blaming the cafeteria (the bot may have simply been down,
+    # or the network/endpoint may be unreachable). Exit 1 = lookup/network/
+    # endpoint failure; exit 0 = service answered (menu may simply be absent).
+    probe=$(python3 "$SCRAPER" --slot "$slot" --date "$day" 2>/dev/null)
+    probe_rc=$?
+    if [ "$probe_rc" -ne 0 ] || [ -z "$probe" ]; then
+      verdict="unreachable"
+    else
+      verdict=$(python3 -c '
+import json, sys
+d = json.loads(sys.argv[1])
+if d.get("closed"):
+    print("closed")
+elif any(s.get("items") for s in (d.get("slots") or [])):
+    print("registered")
+else:
+    print("unregistered")
+' "$probe" 2>/dev/null)
+    fi
+    case "$verdict" in
+      registered)
+        detail="as of $(date +%H:%M) the ${slot} menu WAS registered, but the bot was offline for the post window — nothing was posted for this meal" ;;
+      closed)
+        detail="as of $(date +%H:%M) the cafeteria is closed today — no ${slot} menu to post" ;;
+      unregistered)
+        detail="as of $(date +%H:%M) the cafeteria had not registered today's ${slot} menu — nothing was posted for this meal" ;;
+      *)
+        detail="as of $(date +%H:%M) the bot could not reach the menu service (network down or endpoint change?) — nothing was posted for this meal" ;;
+    esac
+    if "$NOTIFY" "⚠️ ${slot} menu not posted" "$detail" "yellow"; then
       [ "${KBB_DRY_RUN:-0}" = 1 ] || echo "$(date '+%F %T')" > "$missed"
     fi
     return 0

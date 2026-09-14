@@ -77,7 +77,8 @@ post_online
 # it (orchestrator exit 3), retries every tick; at giveup, posts a yellow
 # warning once instead of a menu. The warning is based on a final read-only
 # probe, so it tells the truth: menu unregistered / bot missed the window
-# (menu exists) / cafeteria closed / menu service unreachable.
+# (menu exists) / menu service unreachable. Closed days (holidays, exit 4)
+# are total silence, like weekends.
 try_menu() {
   local slot=$1 wstart=$2 giveup=$3 now=$4 rc
   local day state missed probe probe_rc verdict detail
@@ -107,11 +108,15 @@ else:
     print("unregistered")
 ' "$probe" 2>/dev/null)
     fi
+    if [ "$verdict" = "closed" ]; then
+      # Holiday: total silence, like weekends — stamp and move on.
+      [ "${KBB_DRY_RUN:-0}" = 1 ] || echo "$(date '+%F %T')" > "$missed"
+      log "${slot}: cafeteria closed today — nothing to post"
+      return 0
+    fi
     case "$verdict" in
       registered)
         detail="as of $(date +%H:%M) the ${slot} menu WAS registered, but the bot was offline for the post window — nothing was posted for this meal" ;;
-      closed)
-        detail="as of $(date +%H:%M) the cafeteria is closed today — no ${slot} menu to post" ;;
       unregistered)
         detail="as of $(date +%H:%M) the cafeteria had not registered today's ${slot} menu — nothing was posted for this meal" ;;
       *)
@@ -132,6 +137,13 @@ else:
         echo "$(date '+%F %T')" > "$state"; log "$slot menu posted"
       fi ;;
     3) log "$slot menu not registered yet — retrying" ;;
+    4) # Holiday (cafeteria closed): total silence, like weekends. Stamp it
+       # so today's remaining ticks (menu + photos) don't re-probe.
+       if [ "${KBB_DRY_RUN:-0}" = 1 ]; then
+         log "$slot: cafeteria closed — nothing to post (DRY RUN, state not written)"
+       else
+         echo "$(date '+%F %T')" > "$missed"; log "$slot: cafeteria closed — nothing to post"
+       fi ;;
     *) log "$slot menu post failed (rc=$rc) — retrying" ;;
   esac
 }
@@ -141,11 +153,15 @@ while :; do
   if [ "$dow" -le 5 ]; then
     h=$(date +%H); m=$(date +%M)
     min=$((10#$h * 60 + 10#$m))
+    day=$(date +%Y%m%d)
     try_menu lunch  660  715  "$min"   # 11:00–11:55
     try_menu dinner 1020 1075 "$min"   # 17:00–17:55
     if [ $((min % 5)) -eq 0 ]; then
-      [ "$min" -ge 665 ]  && [ "$min" -lt 720 ]  && "$PHOTOS" lunch   # 11:05–11:55
-      [ "$min" -ge 1025 ] && [ "$min" -le 1109 ] && "$PHOTOS" dinner  # 17:05–18:25
+      # Photos are follow-ups to a posted menu — skip slots whose menu was
+      # never posted today (closed/holiday or unregistered days stay silent
+      # instead of re-scraping every 5 min).
+      [ "$min" -ge 665 ]  && [ "$min" -lt 720 ]  && [ -f "$STATE_DIR/${day}-lunch-menu" ]  && "$PHOTOS" lunch   # 11:05–11:55
+      [ "$min" -ge 1025 ] && [ "$min" -le 1109 ] && [ -f "$STATE_DIR/${day}-dinner-menu" ] && "$PHOTOS" dinner  # 17:05–18:25
     fi
   fi
   sleep 30

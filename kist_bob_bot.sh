@@ -22,6 +22,8 @@
 #   1 — scraping or notification failed
 #   2 — no Dooray target configured
 #   3 — menu not registered yet (NOTHING posted; kbb_agent.sh retries)
+#   4 — cafeteria closed today / holiday (NOTHING posted; the agent treats
+#       the rest of the day as a no-op, like a weekend)
 # =============================================================================
 set -uo pipefail
 
@@ -69,6 +71,14 @@ fi
 MENU_JSON=$(python3 "$SCRAPER" --slot "$SLOT" $DATE_ARG)
 if [ $? -ne 0 ] || [ -z "$MENU_JSON" ]; then
   die "menu scraper failed or returned empty"
+fi
+
+# ---- 1b. Closed day (Korean holiday, closeGb=1) → total silence ------------
+# Same as weekends: no card at all. The agent (rc 4) stamps the slot so the
+# rest of the day is skipped; a manual run just exits quietly.
+if [ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("closed"))' "$MENU_JSON" 2>/dev/null)" = "True" ]; then
+  echo "kist-bob-bot: cafeteria closed today — nothing to post (exit 4)" >&2
+  exit 4
 fi
 
 # ---- 2. Parse and format the notification ----------------------------------

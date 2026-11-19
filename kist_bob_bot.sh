@@ -22,8 +22,9 @@
 #   1 — scraping or notification failed
 #   2 — no Dooray target configured
 #   3 — menu not registered yet (NOTHING posted; kbb_agent.sh retries)
-#   4 — cafeteria closed today / holiday (NOTHING posted; the agent treats
-#       the rest of the day as a no-op, like a weekend)
+#   4 — cafeteria closed today / holiday, OR date listed in skip_dates.txt
+#       (NOTHING posted; the agent treats the rest of the day as a no-op,
+#       like a weekend)
 # =============================================================================
 set -uo pipefail
 
@@ -33,6 +34,8 @@ export TZ=Asia/Seoul
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRAPER="$SCRIPT_DIR/kist_menu_scraper.py"
 NOTIFY="$SCRIPT_DIR/notify_dooray.sh"
+# shellcheck source=kbb_common.sh
+. "$SCRIPT_DIR/kbb_common.sh"
 
 SLOT="all"
 DATE_ARG=""
@@ -57,14 +60,22 @@ die() { echo "kist-bob-bot: $*" >&2; exit 1; }
 # agent's (and vice versa). 'all' is manual-only and stays unguarded.
 STATE_DIR="${KBB_STATE_DIR:-$SCRIPT_DIR/.state}"
 STATE_FILE=""
+DAY_KEY=$(date +%Y%m%d)
+[ -n "$DATE_ARG" ] && DAY_KEY="${DATE_ARG#--date=}"
 if [ "$SLOT" != "all" ]; then
-  DAY_KEY=$(date +%Y%m%d)
-  [ -n "$DATE_ARG" ] && DAY_KEY="${DATE_ARG#--date=}"
   STATE_FILE="$STATE_DIR/${DAY_KEY}-${SLOT}-menu"
   if [ -f "$STATE_FILE" ]; then
     echo "kist-bob-bot: ${DAY_KEY} ${SLOT} menu already posted — skipping"
     exit 0
   fi
+fi
+
+# ---- 1a. Manually skipped day (skip_dates.txt) → total silence -------------
+# Same contract as a closed day (exit 4): nothing is posted, and the agent
+# stamps the slot so the rest of the day (menu retries + photos) is a no-op.
+if is_skip_day "$DAY_KEY"; then
+  echo "kist-bob-bot: ${DAY_KEY} is listed in skip_dates.txt — nothing to post (exit 4)" >&2
+  exit 4
 fi
 
 # ---- 1. Scrape the menu ----------------------------------------------------

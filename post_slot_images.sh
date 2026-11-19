@@ -19,6 +19,8 @@ set -uo pipefail
 export TZ=Asia/Seoul
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=kbb_common.sh
+. "$SCRIPT_DIR/kbb_common.sh"
 SCRAPER="$SCRIPT_DIR/kist_menu_scraper.py"
 NOTIFY="$SCRIPT_DIR/notify_dooray.sh"
 # KBB_STATE_DIR isolates test runs from the production once-per-day state.
@@ -36,6 +38,11 @@ for a in "$@"; do
     --date)   DATE_SET=1 ;;
   esac
 done
+
+DAY_KEY=$(date +%Y%m%d)
+[ -n "$DATE_ARG" ] && DAY_KEY="${DATE_ARG#--date=}"
+# Manually skipped day: photos are a follow-up to the menu post — stay silent.
+is_skip_day "$DAY_KEY" && exit 0
 
 MENU_JSON=$(python3 "$SCRAPER" --slot "$SLOT" $DATE_ARG 2>/dev/null) || exit 0
 [ -z "$MENU_JSON" ] && exit 0

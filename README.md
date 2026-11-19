@@ -13,6 +13,8 @@ KIST(한국과학기술연구원) 식당 메뉴를 Dooray 채널에 자동으로
 
 해당 봇은 클라우드 모델 없이 로컬 Qwen3.8-27B (FP8 W8A16, vLLM) 모델을 추론 강도 xhigh로 OpenCode 하네스에 구동하여 제작되었습니다.
 
+Mac Studio로 서비스를 인계하는 담당자는 [버전 비교, 설치 리허설, 전환 및 복구 절차](MAC-STUDIO-HANDOFF.md)를 참고하세요.
+
 ## 게시 예시
 
 ```
@@ -63,6 +65,8 @@ kist_menu_scraper.py    # Scraper + message formatter (python3 표준 라이브�
 kist_bob_bot.sh         # Orchestrator: Scarpe → format → notify
 post_slot_images.sh     # Follow-up images (사진 업로드 시 게시)
 notify_dooray.sh        # Dooray 전송 (incoming hook only)
+kbb_common.sh           # 공통 헬퍼 (스킵일 판정 등)
+skip_dates.txt          # 수동 스킵일 (게시 중단 날짜) 목록
 kist-bob-bot.service    # systemd user unit
 dooray.conf.example     # 설정 템플릿 (dooray.conf로 복사, chmod 600)
 ```
@@ -143,6 +147,22 @@ Linux systemd 및 Python 표준 라이브러리만 사용하여 의존성을 최
 - 조식·주말·휴무일(식당 휴무)은 안내하지 않습니다.
 - 코너에 영양 상세가 등록되지 않으면 일반 메뉴 목록(이름 + kcal + 단백질)으로 fallback 합니다.
 
+### 수동 스킵일 (`skip_dates.txt`)
+
+자동 휴무일 판정(식당의 `closeGb` 휴무 플래그)이 불안정할 때, 게시를 완전히 중단할 날짜를 직접 지정합니다.
+
+2027년 말까지 평일에 해당하는 전국 공휴일과 대체공휴일을 반영했습니다. 임시공휴일이 지정되거나 KIST 식당이 별도 휴무를 공지하면 담당자가 해당 날짜를 추가합니다. [우주항공청 2027년 월력요항](https://www.kasa.go.kr/bbs/BBSMSTR_000000000018/view.do?nttId=B000000003234Li6nD2)
+
+```
+# skip_dates.txt — 한 줄에 날짜 하나 (YYYYMMDD 또는 YYYY-MM-DD), # 주석 가능
+20270915    # 추석
+2027-10-04  # 개천절 대체공휴일
+```
+
+- 지정된 날짜는 **주말과 동일하게 완전 침묵** — 메뉴·사진 게시 없음, ⚠️ 미게시 안내도 없음.
+- 추가한 날짜는 에이전트가 다음 주기(약 30초)에 확인합니다. 당일 휴무가 취소되면 메뉴 게시를 재개하기 전에 채널과 해당 슬롯의 `-menu-missed` 기록을 함께 확인하세요.
+- 날짜는 지난 뒤에도 그대로 두거나 삭제해도 무방합니다.
+
 ## 설정 참고
 
 `dooray.conf` (`notify_dooray.sh`가 읽음; `chmod 600`):
@@ -162,6 +182,7 @@ Linux systemd 및 Python 표준 라이브러리만 사용하여 의존성을 최
 | `KBB_DRY_RUN` | off | `1` = 페이로드 구성+저장만, 게시/상태 기록 없음 |
 | `KBB_LOCAL_CONF` | `dooray.conf` | 대체 설정 파일 (예: 개인 테스트 채널) |
 | `KBB_STATE_DIR` | `.state/` | 대체 상태 디렉터리 (테스트 격리) |
+| `KBB_SKIP_DATES_FILE` | `skip_dates.txt` | 대체 스킵일 목록 파일 (테스트) |
 | `KBB_LIFECYCLE_NOTICE` | on (1) | `0` = 🟢/🔴 온라인/오프라인 안내를 게시하지 않음 (systemd unit의 `Environment=`로 설정; 재부팅이 잦을 때) |
 
 ## 변경사항 테스트 (개발 워크플로우)

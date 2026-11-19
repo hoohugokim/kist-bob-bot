@@ -30,6 +30,8 @@ BOT="$SCRIPT_DIR/kist_bob_bot.sh"
 NOTIFY="$SCRIPT_DIR/notify_dooray.sh"
 PHOTOS="$SCRIPT_DIR/post_slot_images.sh"
 SCRAPER="$SCRIPT_DIR/kist_menu_scraper.py"
+# shellcheck source=kbb_common.sh
+. "$SCRIPT_DIR/kbb_common.sh"
 
 log() { printf 'kbb_agent: %s\n' "$*"; }
 
@@ -78,7 +80,7 @@ post_online
 # warning once instead of a menu. The warning is based on a final read-only
 # probe, so it tells the truth: menu unregistered / bot missed the window
 # (menu exists) / menu service unreachable. Closed days (holidays, exit 4)
-# are total silence, like weekends.
+# and manually skipped days (skip_dates.txt) are total silence, like weekends.
 try_menu() {
   local slot=$1 wstart=$2 giveup=$3 now=$4 rc
   local day state missed probe probe_rc verdict detail
@@ -86,6 +88,14 @@ try_menu() {
   state="$STATE_DIR/${day}-${slot}-menu"
   missed="$STATE_DIR/${day}-${slot}-menu-missed"
   if [ -f "$state" ] || [ -f "$missed" ]; then return 0; fi
+  # Manually skipped day (skip_dates.txt): total silence, like a closed day.
+  # Checked before the window logic so a late start can't fall into the
+  # give-up probe and post a spurious ⚠️ for a day we chose not to post.
+  if is_skip_day "$day"; then
+    [ "${KBB_DRY_RUN:-0}" = 1 ] || echo "$(date '+%F %T')" > "$missed"
+    log "${slot}: ${day} is in skip_dates.txt — nothing to post"
+    return 0
+  fi
   if [ "$now" -lt "$wstart" ]; then return 0; fi
   if [ "$now" -ge "$giveup" ]; then
     # Final read-only probe so the warning reports the real cause instead

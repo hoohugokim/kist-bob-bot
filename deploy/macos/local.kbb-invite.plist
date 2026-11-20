@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.kbb-invite</string>
+    <key>UserName</key>
+    <string>kbb</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>/Users/kbb/kist-bob-bot/kbb_invite.py</string>
+        <string>--project-id</string>
+        <string>PROJECT_ID</string>
+        <string>--channel-id</string>
+        <string>CHANNEL_ID</string>
+        <string>--token-file</string>
+        <string>/Users/kbb/kbb-ops/invite.token</string>
+        <string>--state-dir</string>
+        <string>/Users/kbb/kbb-ops/invite-state</string>
+        <string>--apply</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>180</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/kbb/kbb-ops/invite.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/kbb/kbb-ops/invite.err</string>
+</dict>
+</plist>

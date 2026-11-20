@@ -9,7 +9,7 @@ KIST(한국과학기술연구원) 식당 메뉴를 Dooray 채널에 자동으로
 - **사진 카드** — 식당 직원이 식사 사진을 올리면 자동으로 사진 카드를 게시합니다.
 - **🟢 온라인 / 🔴 오프라인** 안내 — 스케줄러 데몬 시작/중단 시 알림을 전송합니다.
 
-**현황 (2026년 9월): 운영 중.** 알림채널 참여를 원하실 경우 두레이 메신저에서 '김후 (물자원순환연구단)' 에게 메시지를 주시면 초대해 드립니다.
+**현황 (2026년 12월): 원 제작자의 이직으로 행정팀 서버에 공지대화방으로 확장 이전하여 운영 중.** 알림채널 참여를 원하실 경우 두레이 업무 좌측 하단의 '전체 프로젝트'에서 `키밥봇-구독-신청` 프로젝트를 검색하셔서 안내대로 신청 업무를 등록하시면 키밥봇 서버에서 자동으로 초대해 드립니다.
 
 해당 봇은 클라우드 모델 없이 로컬 Qwen3.8-27B (FP8 W8A16, vLLM) 모델을 추론 강도 xhigh로 OpenCode 하네스에 구동하여 제작되었습니다.
 
@@ -198,6 +198,53 @@ KBB_LOCAL_CONF=dooray.sandbox.conf KBB_STATE_DIR=.state-test ./kist_bob_bot.sh l
 # 프로덕션 — 변경이 만족스러우면:
 systemctl --user restart kist-bob-bot   # 🔴 → 🟢 게시
 ```
+
+## 구독 신청 및 공지방 자동 초대
+
+### 두레이 프로젝트 설정
+
+1. 두레이 웹 **프로젝트 → 즐겨찾는 프로젝트 옆 + → 프로젝트**에서 `키밥봇-구독-신청`을 만듭니다. **프로젝트 설정 → 일반 → 멤버**에는 학연운영팀 담당자와 자동화에 쓸 운영 계정만 추가합니다. 자동화 계정은 구독 프로젝트의 멤버이면서 대상 공지방의 관리자여야 합니다.
+2. **프로젝트 설정 → 업무 → 권한**에서 아래 값을 지정합니다. 등록 대상 조직을 고를 수 있으면 KIST를 선택합니다. [두레이 프로젝트 만들기](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896315749455837575) · [두레이 프로젝트 권한](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896316138135651348)
+
+   | 권한 | 선택값 |
+   | --- | --- |
+   | 읽기 | 멤버와 업무 등록자/담당자/참조자 읽기 가능 |
+   | 등록 | 모두 등록 가능 |
+   | 편집 | 멤버는 모든 업무 편집 가능 |
+   | 이동/삭제/공유하기 | 본인이 등록한 업무만 이동/삭제/공유 가능 |
+
+   이 옵션으로 신청자는 잘못 등록한 업무를 삭제하고 다시 신청할 수 있습니다. 두레이는 본인 업무의 이동과 공유 권한도 함께 부여합니다. 이미 공지방에 가입한 뒤 구독을 취소하려면 메신저에서 직접 방을 나갑니다.
+
+3. 신청자는 두레이에 로그인해 **프로젝트 → 새 업무 → 프로젝트 선택**에서 `키밥봇-구독-신청`을 고르고 업무를 등록합니다. 제목은 자유롭게 입력하고 본문, 담당자, 참조자는 비워도 됩니다. 공개 전에 프로젝트 비멤버 A와 B로 `권한 확인 A`, `권한 확인 B` 업무를 각각 만듭니다. 각자 본인 업무를 열고 삭제한 뒤 다시 등록할 수 있는지, 상대의 업무는 열 수 없는지, 운영팀은 두 업무를 모두 볼 수 있는지 확인합니다. 권한 확인 업무는 자동 초대를 실행하기 전에 닫거나 삭제하세요. 읽기를 제한한 프로젝트는 **전체 프로젝트** 목록에 표시되지 않을 수 있으므로 비멤버의 **새 업무** 프로젝트 선택 화면에서 등록 경로도 확인하세요. [업무 등록](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896331778671698861) · [전체 프로젝트 표시 조건](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2909485018131061027)
+
+### 테스트 공지방에 한 번 초대
+
+테스트에 동의한 계정 한 명이 신청 프로젝트에 업무를 등록합니다. Mac의 `kbb` 서비스 계정에서 아래 명령을 실행하고, 프로젝트 멤버이자 테스트방 관리자인 두레이 계정의 개인 인증 토큰을 입력합니다. `PROJECT_ID`에는 신청 프로젝트의 숫자 ID, `CHANNEL_ID`에는 테스트 공지방의 숫자 ID를 사용합니다. 프로젝트 ID는 업무 주소가 `/task/<project-id>/<post-id>` 형식이면 첫 번째 숫자이며, `GET /project/v1/projects?member=me`로도 확인할 수 있습니다. [두레이 서비스 API](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2939987647631384419)
+
+```bash
+cd /Users/kbb/kist-bob-bot
+ops=/Users/kbb/kbb-ops
+mkdir -p "$ops"
+read -rsp '두레이 개인 API 토큰: ' DOORAY_TOKEN
+printf '\n'
+(umask 077; printf '%s\n' "$DOORAY_TOKEN" > "$ops/invite.token")
+chmod 600 "$ops/invite.token"
+unset DOORAY_TOKEN
+
+invite_args=(
+  --project-id PROJECT_ID
+  --channel-id CHANNEL_ID
+  --token-file "$ops/invite.token"
+  --state-dir "$ops/invite-state"
+)
+python3 kbb_invite.py "${invite_args[@]}"
+```
+
+미리보기에서 테스트 공지방 제목과 초대 대상이 맞으면 `python3 kbb_invite.py "${invite_args[@]}" --apply`를 실행합니다. 참가자 목록과 신청자 메신저에서 가입을 확인하고, 두레이 업무가 **완료**로 표시되는지도 확인합니다. 스크립트는 신청 프로젝트의 열린 업무를 제목과 본문에 관계없이 처리합니다. 초대 성공이나 기존 가입을 확인하면 상태 디렉터리에 먼저 기록하고, 이어서 해당 신청을 완료 처리합니다. 이미 초대 기록이 있고 업무가 열려 있으면 완료 처리만 실행합니다. 가입 또는 완료 처리에 실패한 업무는 다음 조회에서 재시도합니다.
+
+### Mac Studio에서 3분 간격으로 실행
+
+수동 시험이 통과하면 [자동 초대용 LaunchDaemon 템플릿](deploy/macos/local.kbb-invite.plist)의 두 ID와 서버 경로를 시험에 쓴 값으로 바꿉니다. `plutil -lint`로 확인한 복사본을 관리자가 `/Library/LaunchDaemons/local.kbb-invite.plist`로 설치하고 `sudo launchctl bootstrap system /Library/LaunchDaemons/local.kbb-invite.plist`를 실행합니다. 설치 직후와 이후 3분마다 신청을 처리합니다. `invite.log`, `invite.err`에서 결과를 확인합니다. 운영 공지방으로 전환할 때는 해당 방을 관리하는 계정의 토큰과 운영 프로젝트·공지방 ID를 지정합니다. 같은 프로젝트를 재사용하면 다른 방에서 처리한 열린 신청도 새 방의 초대 대상이 되므로 테스트 신청을 먼저 닫습니다.
 
 ## 데이터 출처 안내
 

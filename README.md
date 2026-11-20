@@ -13,8 +13,6 @@ KIST(한국과학기술연구원) 식당 메뉴를 Dooray 채널에 자동으로
 
 해당 봇은 클라우드 모델 없이 로컬 Qwen3.8-27B (FP8 W8A16, vLLM) 모델을 추론 강도 xhigh로 OpenCode 하네스에 구동하여 제작되었습니다.
 
-Mac Studio로 서비스를 인계하는 담당자는 [버전 비교, 설치 리허설, 전환 및 복구 절차](MAC-STUDIO-HANDOFF.md)를 참고하세요.
-
 ## 게시 예시
 
 ```
@@ -149,9 +147,7 @@ Linux systemd 및 Python 표준 라이브러리만 사용하여 의존성을 최
 
 ### 수동 스킵일 (`skip_dates.txt`)
 
-자동 휴무일 판정(식당의 `closeGb` 휴무 플래그)이 불안정할 때, 게시를 완전히 중단할 날짜를 직접 지정합니다.
-
-2027년 말까지 평일에 해당하는 전국 공휴일과 대체공휴일을 반영했습니다. 임시공휴일이 지정되거나 KIST 식당이 별도 휴무를 공지하면 담당자가 해당 날짜를 추가합니다. [우주항공청 2027년 월력요항](https://www.kasa.go.kr/bbs/BBSMSTR_000000000018/view.do?nttId=B000000003234Li6nD2)
+자동 휴무일 판정(식당의 `closeGb` 휴무 플래그) 외에 게시를 중단할 날짜를 직접 지정합니다.
 
 ```
 # skip_dates.txt — 한 줄에 날짜 하나 (YYYYMMDD 또는 YYYY-MM-DD), # 주석 가능
@@ -160,7 +156,6 @@ Linux systemd 및 Python 표준 라이브러리만 사용하여 의존성을 최
 ```
 
 - 지정된 날짜는 **주말과 동일하게 완전 침묵** — 메뉴·사진 게시 없음, ⚠️ 미게시 안내도 없음.
-- 추가한 날짜는 에이전트가 다음 주기(약 30초)에 확인합니다. 당일 휴무가 취소되면 메뉴 게시를 재개하기 전에 채널과 해당 슬롯의 `-menu-missed` 기록을 함께 확인하세요.
 - 날짜는 지난 뒤에도 그대로 두거나 삭제해도 무방합니다.
 
 ## 설정 참고
@@ -198,53 +193,6 @@ KBB_LOCAL_CONF=dooray.sandbox.conf KBB_STATE_DIR=.state-test ./kist_bob_bot.sh l
 # 프로덕션 — 변경이 만족스러우면:
 systemctl --user restart kist-bob-bot   # 🔴 → 🟢 게시
 ```
-
-## 구독 신청 및 공지방 자동 초대
-
-### 두레이 프로젝트 설정
-
-1. 두레이 웹 **프로젝트 → 즐겨찾는 프로젝트 옆 + → 프로젝트**에서 `키밥봇-구독-신청`을 만듭니다. **프로젝트 설정 → 일반 → 멤버**에는 학연운영팀 담당자와 자동화에 쓸 운영 계정만 추가합니다. 자동화 계정은 구독 프로젝트의 멤버이면서 대상 공지방의 관리자여야 합니다.
-2. **프로젝트 설정 → 업무 → 권한**에서 아래 값을 지정합니다. 등록 대상 조직을 고를 수 있으면 KIST를 선택합니다. [두레이 프로젝트 만들기](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896315749455837575) · [두레이 프로젝트 권한](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896316138135651348)
-
-   | 권한 | 선택값 |
-   | --- | --- |
-   | 읽기 | 멤버와 업무 등록자/담당자/참조자 읽기 가능 |
-   | 등록 | 모두 등록 가능 |
-   | 편집 | 멤버는 모든 업무 편집 가능 |
-   | 이동/삭제/공유하기 | 본인이 등록한 업무만 이동/삭제/공유 가능 |
-
-   이 옵션으로 신청자는 잘못 등록한 업무를 삭제하고 다시 신청할 수 있습니다. 두레이는 본인 업무의 이동과 공유 권한도 함께 부여합니다. 이미 공지방에 가입한 뒤 구독을 취소하려면 메신저에서 직접 방을 나갑니다.
-
-3. 신청자는 두레이에 로그인해 **프로젝트 → 새 업무 → 프로젝트 선택**에서 `키밥봇-구독-신청`을 고르고 업무를 등록합니다. 제목은 자유롭게 입력하고 본문, 담당자, 참조자는 비워도 됩니다. 공개 전에 프로젝트 비멤버 A와 B로 `권한 확인 A`, `권한 확인 B` 업무를 각각 만듭니다. 각자 본인 업무를 열고 삭제한 뒤 다시 등록할 수 있는지, 상대의 업무는 열 수 없는지, 운영팀은 두 업무를 모두 볼 수 있는지 확인합니다. 권한 확인 업무는 자동 초대를 실행하기 전에 닫거나 삭제하세요. 읽기를 제한한 프로젝트는 **전체 프로젝트** 목록에 표시되지 않을 수 있으므로 비멤버의 **새 업무** 프로젝트 선택 화면에서 등록 경로도 확인하세요. [업무 등록](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2896331778671698861) · [전체 프로젝트 표시 조건](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2909485018131061027)
-
-### 테스트 공지방에 한 번 초대
-
-테스트에 동의한 계정 한 명이 신청 프로젝트에 업무를 등록합니다. Mac의 `kbb` 서비스 계정에서 아래 명령을 실행하고, 프로젝트 멤버이자 테스트방 관리자인 두레이 계정의 개인 인증 토큰을 입력합니다. `PROJECT_ID`에는 신청 프로젝트의 숫자 ID, `CHANNEL_ID`에는 테스트 공지방의 숫자 ID를 사용합니다. 프로젝트 ID는 업무 주소가 `/task/<project-id>/<post-id>` 형식이면 첫 번째 숫자이며, `GET /project/v1/projects?member=me`로도 확인할 수 있습니다. [두레이 서비스 API](https://helpdesk.dooray.com/share/pages/9wWo-xwiR66BO5LGshgVTg/2939987647631384419)
-
-```bash
-cd /Users/kbb/kist-bob-bot
-ops=/Users/kbb/kbb-ops
-mkdir -p "$ops"
-read -rsp '두레이 개인 API 토큰: ' DOORAY_TOKEN
-printf '\n'
-(umask 077; printf '%s\n' "$DOORAY_TOKEN" > "$ops/invite.token")
-chmod 600 "$ops/invite.token"
-unset DOORAY_TOKEN
-
-invite_args=(
-  --project-id PROJECT_ID
-  --channel-id CHANNEL_ID
-  --token-file "$ops/invite.token"
-  --state-dir "$ops/invite-state"
-)
-python3 kbb_invite.py "${invite_args[@]}"
-```
-
-미리보기에서 테스트 공지방 제목과 초대 대상이 맞으면 `python3 kbb_invite.py "${invite_args[@]}" --apply`를 실행합니다. 참가자 목록과 신청자 메신저에서 가입을 확인하고, 두레이 업무가 **완료**로 표시되는지도 확인합니다. 스크립트는 신청 프로젝트의 열린 업무를 제목과 본문에 관계없이 처리합니다. 초대 성공이나 기존 가입을 확인하면 상태 디렉터리에 먼저 기록하고, 이어서 해당 신청을 완료 처리합니다. 이미 초대 기록이 있고 업무가 열려 있으면 완료 처리만 실행합니다. 가입 또는 완료 처리에 실패한 업무는 다음 조회에서 재시도합니다.
-
-### Mac Studio에서 3분 간격으로 실행
-
-수동 시험이 통과하면 [자동 초대용 LaunchDaemon 템플릿](deploy/macos/local.kbb-invite.plist)의 두 ID와 서버 경로를 시험에 쓴 값으로 바꿉니다. `plutil -lint`로 확인한 복사본을 관리자가 `/Library/LaunchDaemons/local.kbb-invite.plist`로 설치하고 `sudo launchctl bootstrap system /Library/LaunchDaemons/local.kbb-invite.plist`를 실행합니다. 설치 직후와 이후 3분마다 신청을 처리합니다. `invite.log`, `invite.err`에서 결과를 확인합니다. 운영 공지방으로 전환할 때는 해당 방을 관리하는 계정의 토큰과 운영 프로젝트·공지방 ID를 지정합니다. 같은 프로젝트를 재사용하면 다른 방에서 처리한 열린 신청도 새 방의 초대 대상이 되므로 테스트 신청을 먼저 닫습니다.
 
 ## 데이터 출처 안내
 
